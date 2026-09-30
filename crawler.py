@@ -101,7 +101,7 @@ def parse_jobs(html):
     return jobs
 
 
-def main():
+def run_crawler():
 
     html = get_html()
 
@@ -120,4 +120,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_crawler()
