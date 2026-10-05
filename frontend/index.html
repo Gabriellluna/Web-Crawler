@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vagas remotas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a href="/">Vagas remotas</a></header>
+
+  <main>
+    <h2 id="title">Vagas coletadas</h2>
+    <p id="status">Carregando...</p>
+    <ul id="jobs" class="job-list"></ul>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const listEl = document.getElementById("jobs");
+
+    async function loadJobs() {
+      try {
+        // Rota 1: todos os trabalhos
+        const response = await fetch("/jobs/");
+        if (!response.ok) throw new Error("A API respondeu com erro " + response.status);
+
+        const jobs = await response.json();
+
+        if (jobs.length === 0) {
+          statusEl.textContent = "Nenhuma vaga no banco. Execute o crawler primeiro.";
+          return;
+        }
+
+        statusEl.textContent = jobs.length + " vagas coletadas";
+
+        jobs.forEach((job) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = "job.html?id=" + encodeURIComponent(job._id);
+
+          const title = document.createElement("div");
+          title.className = "job-title";
+          title.textContent = job.title;
+
+          const meta = document.createElement("div");
+          meta.className = "job-meta";
+          meta.textContent = [job.company, job.location].filter(Boolean).join(" • ");
+
+          a.append(title, meta);
+          li.append(a);
+          listEl.append(li);
+        });
+      } catch (error) {
+        statusEl.textContent = "Erro ao carregar as vagas: " + error.message;
+        statusEl.className = "error";
+      }
+    }
+
+    loadJobs();
+  </script>
+</body>
+</html>

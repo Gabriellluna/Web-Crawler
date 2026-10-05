@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalhes da vaga</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a href="/">Vagas remotas</a></header>
+
+  <main>
+    <a class="back" href="/">Voltar para a lista</a>
+    <p id="status">Carregando...</p>
+
+    <div id="card" class="card" hidden>
+      <h1 id="title"></h1>
+
+      <div class="label">Empresa</div>
+      <div id="company"></div>
+
+      <div class="label">Localização</div>
+      <div id="location"></div>
+
+      <div class="label">Fonte</div>
+      <div id="source"></div>
+
+      <div class="label">Coletada em</div>
+      <div id="collected"></div>
+
+      <a id="url" class="button" target="_blank" rel="noopener noreferrer">Ver vaga original</a>
+    </div>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+
+    function show(id, value) {
+      document.getElementById(id).textContent = value || "Não informado";
+    }
+
+    async function loadJob() {
+      const id = new URLSearchParams(window.location.search).get("id");
+
+      if (!id) {
+        statusEl.textContent = "Nenhuma vaga selecionada.";
+        statusEl.className = "error";
+        return;
+      }
+
+      try {
+        // Rota 2: trabalho por id
+        const response = await fetch("/jobs/" + encodeURIComponent(id));
+
+        if (response.status === 404) throw new Error("Vaga não encontrada.");
+        if (!response.ok) throw new Error("A API respondeu com erro " + response.status);
+
+        const job = await response.json();
+
+        show("title", job.title);
+        show("company", job.company);
+        show("location", job.location);
+        show("source", job.source);
+        show("collected", job.collected_at && new Date(job.collected_at).toLocaleString("pt-BR"));
+        document.getElementById("url").href = job.url;
+
+        document.title = job.title;
+        statusEl.hidden = true;
+        document.getElementById("card").hidden = false;
+      } catch (error) {
+        statusEl.textContent = error.message;
+        statusEl.className = "error";
+      }
+    }
+
+    loadJob();
+  </script>
+</body>
+</html>
