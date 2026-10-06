@@ -401,15 +401,6 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.notice {
-  margin: 0 0 var(--space-6);
-  padding: var(--space-3) var(--space-4);
-  background: var(--signal-soft);
-  color: var(--ink-mid);
-  font-size: 0.8125rem;
-  border-radius: var(--radius);
-}
-
 .detail__back {
   display: inline-block;
   margin-bottom: var(--space-7);

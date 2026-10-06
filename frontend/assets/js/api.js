@@ -1,13 +1,5 @@
-import { localFilters, localJobs, localStats } from "./fallback.js";
-
-export const MISSING_ENDPOINTS = [];
-
 export async function listJobs(params, signal) {
-  const data = await request("/jobs/", params, signal);
-  if (!Array.isArray(data)) return data;
-
-  noteMissing("/jobs/ com filtros");
-  return localJobs(data, params);
+  return request("/jobs/", params, signal);
 }
 
 export async function getJob(id, signal) {
@@ -15,23 +7,11 @@ export async function getJob(id, signal) {
 }
 
 export async function getStats(params, signal) {
-  try {
-    return await request("/stats/", params, signal);
-  } catch (error) {
-    if (error.status !== 404) throw error;
-    noteMissing("/stats/");
-    return localStats(await allJobs(signal), params);
-  }
+  return request("/stats/", params, signal);
 }
 
 export async function getFilterOptions(signal) {
-  try {
-    return await request("/filters/", null, signal);
-  } catch (error) {
-    if (error.status !== 404) throw error;
-    noteMissing("/filters/");
-    return localFilters(await allJobs(signal));
-  }
+  return request("/filters/", null, signal);
 }
 
 async function request(path, params, signal) {
@@ -52,13 +32,4 @@ async function request(path, params, signal) {
   }
 
   return response.json();
-}
-
-async function allJobs(signal) {
-  const data = await request("/jobs/", null, signal);
-  return Array.isArray(data) ? data : data.items;
-}
-
-function noteMissing(name) {
-  if (!MISSING_ENDPOINTS.includes(name)) MISSING_ENDPOINTS.push(name);
 }

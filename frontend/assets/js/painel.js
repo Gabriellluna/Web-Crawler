@@ -1,11 +1,10 @@
-import { MISSING_ENDPOINTS, getFilterOptions, getStats, listJobs } from "./api.js";
+import { getFilterOptions, getStats, listJobs } from "./api.js";
 import { createBarChart } from "./charts.js";
 import { count, relative, shortSalary, text } from "./format.js";
 
 const PAGE_SIZE = 20;
 
 const elements = {
-  notice: document.getElementById("notice"),
   lastCollect: document.getElementById("last-collect"),
   heroStatement: document.getElementById("hero-statement"),
   heroBand: document.getElementById("hero-band"),
@@ -32,7 +31,7 @@ const charts = {
   category: createBarChart({
     canvas: document.getElementById("chart-category"),
     empty: document.getElementById("chart-category-empty"),
-    emptyMessage: "O crawler ainda não salva a categoria das vagas.",
+    emptyMessage: "Nenhuma categoria neste recorte.",
     horizontal: true
   }),
   companies: createBarChart({
@@ -50,7 +49,7 @@ const charts = {
   age: createBarChart({
     canvas: document.getElementById("chart-age"),
     empty: document.getElementById("chart-age-empty"),
-    emptyMessage: "Sem data de publicação nos dados coletados."
+    emptyMessage: "Sem data de publicação neste recorte."
   })
 };
 
@@ -125,7 +124,6 @@ async function refresh() {
     renderMetrics(stats);
     renderCharts(stats);
     renderTable(page);
-    renderNotice();
   } catch (error) {
     if (error.name !== "AbortError") renderError(error);
   }
@@ -225,18 +223,6 @@ function jobRow(job) {
   );
 
   return row;
-}
-
-function renderNotice() {
-  if (MISSING_ENDPOINTS.length === 0) {
-    elements.notice.hidden = true;
-    return;
-  }
-
-  elements.notice.hidden = false;
-  elements.notice.textContent =
-    `Ainda faltam na API: ${MISSING_ENDPOINTS.join(", ")}. ` +
-    "Os números estão sendo calculados no navegador enquanto isso.";
 }
 
 function renderError(error) {

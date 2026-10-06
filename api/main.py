@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import router
+from api.routes import filters_router, jobs_router, stats_router
 from crawler import run_crawler
 
 INTERVALO_MINUTOS = 5
@@ -17,7 +17,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-app.include_router(router)
+app.include_router(jobs_router)
+app.include_router(stats_router)
+app.include_router(filters_router)
 
 
 def crawler_loop():

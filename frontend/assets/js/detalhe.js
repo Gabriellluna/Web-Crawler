@@ -28,8 +28,8 @@ async function load() {
   try {
     render(await getJob(id));
   } catch (error) {
-    fail(error.status === 404
-      ? "Essa vaga não está mais no banco."
+    fail(error.status === 404 || error.status === 400
+      ? "Essa vaga não foi encontrada no banco."
       : `${error.message}. Confira se o uvicorn e o MongoDB estão rodando.`);
   }
 }

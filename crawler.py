@@ -1,12 +1,15 @@
+import re
 import requests
 
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
 
 from database import save_jobs
 
 BASE_URL = "https://weworkremotely.com"
 JOBS_URL = f"{BASE_URL}/remote-jobs"
+MULTIPLE_REGIONS = "Vários países"
 
 
 def get_html():
@@ -31,6 +34,79 @@ def get_html():
     response.raise_for_status()
 
     return response.text
+
+
+def parse_category(listing):
+    section = listing.find_parent("section", class_="jobs")
+
+    if not section:
+        return None
+
+    link = section.select_one("h2 a")
+
+    if not link:
+        return None
+
+    return link.get_text(" ", strip=True).removesuffix(" Jobs")
+
+
+def parse_tags(listing):
+    # "Featured", "Top 100" e "Boosted" são selos do site e vêm com uma classe
+    # modificadora a mais. Só as tags com a classe base descrevem a vaga.
+    tags = [
+        tag.get_text(" ", strip=True)
+        for tag in listing.select(".new-listing__categories__category")
+        if len(tag.get("class", [])) == 1
+    ]
+
+    if not tags:
+        return None, None, None
+
+    job_type = tags[0]
+    rest = tags[1:]
+
+    salary_range = rest[0] if rest and rest[0].startswith("$") else None
+    regions = rest[1:] if salary_range else rest
+
+    if not regions:
+        region = None
+    elif len(regions) == 1:
+        region = regions[0]
+    else:
+        region = MULTIPLE_REGIONS
+
+    return job_type, salary_range, region
+
+
+def parse_posted_at(listing):
+    element = listing.select_one(".new-listing__header__icons__date")
+
+    if not element:
+        return None
+
+    label = element.get_text(" ", strip=True)
+    now = datetime.now(timezone.utc)
+
+    if label == "New":
+        return now
+
+    match = re.fullmatch(r"(\d+)d", label)
+
+    if not match:
+        return None
+
+    return now - timedelta(days=int(match.group(1)))
+
+
+def parse_logo(listing):
+    element = listing.select_one(".tooltip--flag-logo__flag-logo")
+
+    if not element:
+        return None
+
+    match = re.search(r"url\((.+?)\)", element.get("style", ""))
+
+    return match.group(1) if match else None
 
 
 def parse_jobs(html):
@@ -89,11 +165,19 @@ def parse_jobs(html):
             link.get("href")
         )
 
+        job_type, salary_range, region = parse_tags(listing)
+
         job = {
             "title": title,
             "company": company,
             "location": location,
-            "url": url
+            "url": url,
+            "category": parse_category(listing),
+            "job_type": job_type,
+            "salary_range": salary_range,
+            "region": region,
+            "posted_at": parse_posted_at(listing),
+            "company_logo": parse_logo(listing)
         }
 
         jobs.append(job)
