@@ -1,79 +1,65 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Detalhes da vaga</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/css/app.css">
 </head>
+
 <body>
-  <header><a href="/">Vagas remotas</a></header>
+  <header class="topbar">
+    <a class="topbar__brand" href="/">vagas remotas</a>
+  </header>
 
-  <main>
-    <a class="back" href="/">Voltar para a lista</a>
-    <p id="status">Carregando...</p>
+  <main class="page">
+    <a class="detail__back" href="/">Voltar ao painel</a>
 
-    <div id="card" class="card" hidden>
-      <h1 id="title"></h1>
+    <p class="state" id="state">Carregando a vaga</p>
 
-      <div class="label">Empresa</div>
-      <div id="company"></div>
+    <article class="detail" id="detail" hidden>
+      <div class="detail__company">
+        <img class="detail__logo" id="logo" alt="" hidden>
+        <span class="detail__company-name" id="company"></span>
+      </div>
 
-      <div class="label">Localização</div>
-      <div id="location"></div>
+      <h1 class="detail__title" id="title"></h1>
 
-      <div class="label">Fonte</div>
-      <div id="source"></div>
+      <ul class="chips" id="chips"></ul>
 
-      <div class="label">Coletada em</div>
-      <div id="collected"></div>
+      <a class="detail__action" id="original" target="_blank" rel="noopener noreferrer">
+        Ver a vaga no site original
+      </a>
 
-      <a id="url" class="button" target="_blank" rel="noopener noreferrer">Ver vaga original</a>
-    </div>
+      <section class="record">
+        <p class="record__caption">Procedência do registro</p>
+        <dl class="record__grid">
+          <div>
+            <dt class="record__term">Site de origem</dt>
+            <dd class="record__value" id="source"></dd>
+          </div>
+          <div>
+            <dt class="record__term">Página coletada</dt>
+            <dd class="record__value" id="source-url"></dd>
+          </div>
+          <div>
+            <dt class="record__term">Última coleta</dt>
+            <dd class="record__value" id="collected-at"></dd>
+          </div>
+          <div>
+            <dt class="record__term">Sede da empresa</dt>
+            <dd class="record__value" id="location"></dd>
+          </div>
+        </dl>
+      </section>
+    </article>
   </main>
 
-  <script>
-    const statusEl = document.getElementById("status");
-
-    function show(id, value) {
-      document.getElementById(id).textContent = value || "Não informado";
-    }
-
-    async function loadJob() {
-      const id = new URLSearchParams(window.location.search).get("id");
-
-      if (!id) {
-        statusEl.textContent = "Nenhuma vaga selecionada.";
-        statusEl.className = "error";
-        return;
-      }
-
-      try {
-        // Rota 2: trabalho por id
-        const response = await fetch("/jobs/" + encodeURIComponent(id));
-
-        if (response.status === 404) throw new Error("Vaga não encontrada.");
-        if (!response.ok) throw new Error("A API respondeu com erro " + response.status);
-
-        const job = await response.json();
-
-        show("title", job.title);
-        show("company", job.company);
-        show("location", job.location);
-        show("source", job.source);
-        show("collected", job.collected_at && new Date(job.collected_at).toLocaleString("pt-BR"));
-        document.getElementById("url").href = job.url;
-
-        document.title = job.title;
-        statusEl.hidden = true;
-        document.getElementById("card").hidden = false;
-      } catch (error) {
-        statusEl.textContent = error.message;
-        statusEl.className = "error";
-      }
-    }
-
-    loadJob();
-  </script>
+  <script type="module" src="assets/js/detalhe.js"></script>
 </body>
+
 </html>

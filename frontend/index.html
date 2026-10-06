@@ -1,63 +1,134 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vagas remotas</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Painel de vagas remotas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/css/app.css">
 </head>
-<body>
-  <header><a href="/">Vagas remotas</a></header>
 
-  <main>
-    <h2 id="title">Vagas coletadas</h2>
-    <p id="status">Carregando...</p>
-    <ul id="jobs" class="job-list"></ul>
+<body>
+  <header class="topbar">
+    <a class="topbar__brand" href="/">vagas remotas</a>
+    <p class="topbar__meta" id="last-collect"></p>
+  </header>
+
+  <main class="page">
+    <p class="notice" id="notice" hidden></p>
+
+    <section class="hero">
+      <h1 class="hero__statement" id="hero-statement">Carregando a coleta</h1>
+      <div class="hero__band" id="hero-band" hidden>
+        <div class="hero__band-fill" id="hero-band-fill"></div>
+      </div>
+      <p class="hero__note" id="hero-note"></p>
+    </section>
+
+    <section class="metrics">
+      <div class="metric">
+        <span class="metric__value" id="metric-total">&mdash;</span>
+        <span class="metric__label">vagas coletadas</span>
+      </div>
+      <div class="metric">
+        <span class="metric__value" id="metric-companies">&mdash;</span>
+        <span class="metric__label">empresas contratando</span>
+      </div>
+      <div class="metric">
+        <span class="metric__value" id="metric-new">&mdash;</span>
+        <span class="metric__label">publicadas nos últimos 7 dias</span>
+      </div>
+      <div class="metric">
+        <span class="metric__value" id="metric-salary">&mdash;</span>
+        <span class="metric__label">informam faixa salarial</span>
+      </div>
+    </section>
+
+    <form class="filters" id="filters" autocomplete="off">
+      <div class="filters__search">
+        <label class="visually-hidden" for="filter-search">Buscar</label>
+        <input type="search" id="filter-search" name="search" placeholder="Buscar por título ou empresa">
+      </div>
+      <select id="filter-category" name="category" aria-label="Categoria">
+        <option value="">Todas as categorias</option>
+      </select>
+      <select id="filter-job-type" name="job_type" aria-label="Tipo de contrato">
+        <option value="">Todos os contratos</option>
+      </select>
+      <select id="filter-region" name="region" aria-label="Região">
+        <option value="">Todas as regiões</option>
+      </select>
+      <button class="filters__reset" type="reset">Limpar</button>
+    </form>
+
+    <section class="charts">
+      <article class="chart chart--tall">
+        <h2 class="chart__title">Vagas por categoria</h2>
+        <div class="chart__canvas">
+          <canvas id="chart-category"></canvas>
+          <p class="chart__empty" id="chart-category-empty" hidden></p>
+        </div>
+      </article>
+
+      <article class="chart">
+        <h2 class="chart__title">Empresas que mais contratam</h2>
+        <div class="chart__canvas">
+          <canvas id="chart-companies"></canvas>
+          <p class="chart__empty" id="chart-companies-empty" hidden></p>
+        </div>
+      </article>
+
+      <article class="chart">
+        <h2 class="chart__title">Faixa salarial declarada</h2>
+        <div class="chart__canvas">
+          <canvas id="chart-salary"></canvas>
+          <p class="chart__empty" id="chart-salary-empty" hidden></p>
+        </div>
+      </article>
+
+      <article class="chart chart--wide">
+        <h2 class="chart__title">Idade do anúncio</h2>
+        <div class="chart__canvas">
+          <canvas id="chart-age"></canvas>
+          <p class="chart__empty" id="chart-age-empty" hidden></p>
+        </div>
+      </article>
+    </section>
+
+    <section class="results">
+      <div class="results__head">
+        <h2 class="results__title">Vagas coletadas</h2>
+        <p class="results__count" id="results-count"></p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Vaga</th>
+              <th scope="col">Empresa</th>
+              <th scope="col">Categoria</th>
+              <th scope="col">Contrato</th>
+              <th scope="col">Coletada</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+
+      <nav class="pagination" id="pagination" hidden>
+        <button class="pagination__button" type="button" id="page-prev">Anterior</button>
+        <span class="pagination__position" id="page-position"></span>
+        <button class="pagination__button" type="button" id="page-next">Próxima</button>
+      </nav>
+    </section>
   </main>
 
-  <script>
-    const statusEl = document.getElementById("status");
-    const listEl = document.getElementById("jobs");
-
-    async function loadJobs() {
-      try {
-        // Rota 1: todos os trabalhos
-        const response = await fetch("/jobs/");
-        if (!response.ok) throw new Error("A API respondeu com erro " + response.status);
-
-        const jobs = await response.json();
-
-        if (jobs.length === 0) {
-          statusEl.textContent = "Nenhuma vaga no banco. Execute o crawler primeiro.";
-          return;
-        }
-
-        statusEl.textContent = jobs.length + " vagas coletadas";
-
-        jobs.forEach((job) => {
-          const li = document.createElement("li");
-          const a = document.createElement("a");
-          a.href = "job.html?id=" + encodeURIComponent(job._id);
-
-          const title = document.createElement("div");
-          title.className = "job-title";
-          title.textContent = job.title;
-
-          const meta = document.createElement("div");
-          meta.className = "job-meta";
-          meta.textContent = [job.company, job.location].filter(Boolean).join(" • ");
-
-          a.append(title, meta);
-          li.append(a);
-          listEl.append(li);
-        });
-      } catch (error) {
-        statusEl.textContent = "Erro ao carregar as vagas: " + error.message;
-        statusEl.className = "error";
-      }
-    }
-
-    loadJobs();
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script type="module" src="assets/js/painel.js"></script>
 </body>
+
 </html>
