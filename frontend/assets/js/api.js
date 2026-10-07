@@ -11,10 +11,10 @@ export async function getStats(params) {
 }
 
 export async function getFilterOptions() {
-  return request("/filters/", null );
+  return request("/filters/", null);
 }
 
-async function request(path, params ) {
+async function request(path, params) {
   const url = new URL(path, window.location.origin);
 
   for (const [key, value] of Object.entries(params ?? {})) {
