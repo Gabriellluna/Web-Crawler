@@ -2,7 +2,7 @@ import { getFilterOptions, getStats, listJobs } from "./api.js";
 import { createBarChart } from "./charts.js";
 import { count, relative, shortSalary, text } from "./format.js";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 const elements = {
   lastCollect: document.getElementById("last-collect"),
@@ -109,15 +109,14 @@ async function loadFilterOptions() {
 async function refresh() {
   if (pending) pending.abort();
   pending = new AbortController();
-  const { signal } = pending;
 
   showSkeleton();
 
   try {
     const query = filterQuery();
     const [stats, page] = await Promise.all([
-      getStats(query, signal),
-      listJobs({ ...query, page: state.page, page_size: PAGE_SIZE }, signal)
+      getStats(query),
+      listJobs({ ...query, page: state.page, page_size: PAGE_SIZE })
     ]);
 
     renderHero(stats);

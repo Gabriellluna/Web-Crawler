@@ -201,7 +201,3 @@ def run_crawler():
 
     print(f"Novas vagas inseridas: {inserted}")
     print("Dados salvos no MongoDB.")
-
-
-if __name__ == "__main__":
-    run_crawler()

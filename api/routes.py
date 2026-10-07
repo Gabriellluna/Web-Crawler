@@ -64,6 +64,8 @@ def job_filters(
         pattern = {"$regex": re.escape(search), "$options": "i"}
         query["$or"] = [{"title": pattern}, {"company": pattern}]
 
+    print("Query: ", query)
+
     return query
 
 
@@ -122,7 +124,7 @@ def distinct_values(field: str) -> list:
     return sorted(value for value in values if value)
 
 
-@jobs_router.get("/")
+@jobs_router.get("/") #retorna as vagas em si
 def get_jobs(
     query: dict = Depends(job_filters),
     sort: str = "",
@@ -147,7 +149,7 @@ def get_jobs(
     }
 
 
-@jobs_router.get("/{job_id}")
+@jobs_router.get("/{job_id}") #retorna dados de uma vaga de acordo com o id
 def get_job_by_id(job_id: str):
     try:
         object_id = ObjectId(job_id)
@@ -162,21 +164,24 @@ def get_job_by_id(job_id: str):
     return serialize_job(job)
 
 
-@stats_router.get("/")
+@stats_router.get("/") #retorna estatísticas das vagas, de acordo com os filtros do usuário
 def get_stats(query: dict = Depends(job_filters)):
+    print("QUery do mano aqui: ", query)
+    #array com vagas de acordo com o filtro passado
     jobs = [serialize_job(job) for job in jobs_collection.find(query)]
 
+    #retorno de estatísticas sobre esse array
     return {
-        "total": len(jobs),
-        "companies": len({job["company"] for job in jobs if job.get("company")}),
-        "anywhere_count": sum(1 for job in jobs if job.get("region") == ANYWHERE),
+        "total": len(jobs), #número de vagas
+        "companies": len({job["company"] for job in jobs if job.get("company")}),#número de empresas
+        "anywhere_count": sum(1 for job in jobs if job.get("region") == ANYWHERE), #vagas de qualquer lugar no mundo
         "new_count": sum(
             1 for job in jobs
             if job["posted_age_days"] is not None
             and job["posted_age_days"] <= NEW_LIMIT_DAYS
-        ),
-        "with_salary_count": sum(1 for job in jobs if job.get("salary_range")),
-        "last_collected_at": last_collected_at(),
+        ),#número de vagas recém adicionadas
+        "with_salary_count": sum(1 for job in jobs if job.get("salary_range")),#vagas que tenham informações sobre faixa salarial
+        "last_collected_at": last_collected_at(), #data que foi buscado pelo web crawler
         "by_category": count_by(jobs, "category"),
         "by_job_type": count_by(jobs, "job_type"),
         "by_salary_range": sorted(count_by(jobs, "salary_range"), key=salary_order),
@@ -188,7 +193,7 @@ def get_stats(query: dict = Depends(job_filters)):
 @filters_router.get("/")
 def get_filter_options():
     return {
-        "categories": distinct_values("category"),
-        "job_types": distinct_values("job_type"),
-        "regions": distinct_values("region")
+        "categories": distinct_values("category"), #retorna todas as categorias existentes das vagas
+        "job_types": distinct_values("job_type"), #retorna os tipos de contrato das vagas
+        "regions": distinct_values("region") #retorna as regiões das vagas
     }
