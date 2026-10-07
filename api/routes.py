@@ -64,8 +64,6 @@ def job_filters(
         pattern = {"$regex": re.escape(search), "$options": "i"}
         query["$or"] = [{"title": pattern}, {"company": pattern}]
 
-    print("Query: ", query)
-
     return query
 
 
@@ -127,7 +125,6 @@ def distinct_values(field: str) -> list:
 @jobs_router.get("/") #retorna as vagas em si
 def get_jobs(
     query: dict = Depends(job_filters),
-    sort: str = "",
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100)
 ):
@@ -135,7 +132,6 @@ def get_jobs(
 
     jobs = (
         jobs_collection.find(query)
-        .sort(sort_order(sort))
         .skip((page - 1) * page_size)
         .limit(page_size)
     )
@@ -166,7 +162,6 @@ def get_job_by_id(job_id: str):
 
 @stats_router.get("/") #retorna estatísticas das vagas, de acordo com os filtros do usuário
 def get_stats(query: dict = Depends(job_filters)):
-    print("QUery do mano aqui: ", query)
     #array com vagas de acordo com o filtro passado
     jobs = [serialize_job(job) for job in jobs_collection.find(query)]
 

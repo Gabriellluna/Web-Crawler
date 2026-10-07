@@ -19,7 +19,6 @@ def save_jobs(jobs):
 
     for job in jobs:
         job["collected_at"] = datetime.now(timezone.utc)
-        job["source"] = "We Work Remotely"
         job["source_url"] = "https://weworkremotely.com/remote-jobs"
 
         result = jobs_collection.update_one(

@@ -5,7 +5,6 @@ import { count, relative, shortSalary, text } from "./format.js";
 const PAGE_SIZE = 15;
 
 const elements = {
-  lastCollect: document.getElementById("last-collect"),
   heroStatement: document.getElementById("hero-statement"),
   heroBand: document.getElementById("hero-band"),
   heroBandFill: document.getElementById("hero-band-fill"),
@@ -139,8 +138,6 @@ function filterQuery() {
 
 function renderHero(stats) {
   const { total, anywhere_count: anywhere, companies, last_collected_at: collectedAt } = stats;
-
-  elements.lastCollect.textContent = collectedAt ? `coleta ${relative(collectedAt)}` : "";
 
   if (total === 0) {
     elements.heroStatement.textContent = isFiltered()
