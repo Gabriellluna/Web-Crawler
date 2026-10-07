@@ -151,7 +151,7 @@ Os filtros são opcionais e combinam entre si. `search` procura no título e na 
 | `category` / `job_type` / `region` | vazio | Um dos valores devolvidos por `/filters/` |
 | `sort` | `collected_at` decrescente | `title` ou `company` |
 | `page` | `1` | Inteiro a partir de 1 |
-| `page_size` | `20` | De 1 a 100 |
+| `page_size` | `15` | De 1 a 100 |
 
 `/jobs/` responde com `items`, `total`, `page`, `page_size` e `pages`. Cada vaga traz também `posted_age_days`, a idade do anúncio em dias.
 
