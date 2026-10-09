@@ -1,14 +1,42 @@
 # Web Crawler de Vagas Remotas
 
-Plataforma de coleta e visualização de vagas de emprego remoto (projeto CP5 de Python).
+Plataforma de coleta, armazenamento e visualização de vagas de emprego remoto (projeto CP5 de Python). Um crawler coleta as vagas do [We Work Remotely](https://weworkremotely.com/remote-jobs) automaticamente, guarda tudo no MongoDB, uma API FastAPI disponibiliza os dados e um painel web permite explorá-los.
+
+**Acesse online:** https://web-crawler-orcin.vercel.app
 
 ```text
-We Work Remotely → Web Crawler → MongoDB → FastAPI → Front-end (HTML + JS)
+We Work Remotely → Crawler (GitHub Actions) → MongoDB Atlas → API FastAPI (Vercel) → Painel web (Vercel)
 ```
 
-O crawler acessa o site público **a cada 5 minutos**, salva as vagas no MongoDB sem duplicar registros e a API disponibiliza os dados para as telas do front-end.
+## Como funciona
 
-## Site escolhido
+O sistema tem dois caminhos independentes, e o MongoDB Atlas é o único ponto de encontro entre eles:
+
+**Escrita (a cada 5 minutos)**
+1. O GitHub Actions dispara o workflow `.github/workflows/crawler.yml` sozinho, a cada 5 minutos.
+2. O workflow executa `run_crawler()`, de `crawler.py`: acessa o site, extrai as vagas e trata os dados.
+3. As vagas são gravadas no Atlas com `upsert` pela `url`: vagas novas são inseridas e as que já existem têm só a data da coleta atualizada. Nada é apagado.
+
+**Leitura (quando alguém acessa)**
+1. O navegador baixa o painel (`public/`) servido pela Vercel.
+2. O JavaScript do painel faz requisições `GET` à API (`/jobs/`, `/stats/`, `/filters/`).
+3. A API, que roda na Vercel como função sob demanda, consulta o Atlas e responde com JSON.
+4. O painel desenha indicadores, gráficos e tabela com o que recebeu.
+
+Como o crawler escreve no banco de forma independente e a API lê o banco a cada requisição, as vagas novas aparecem no painel sem nenhuma ação manual, bastando recarregar a página.
+
+## Tecnologias
+
+| Camada | Tecnologia |
+|---|---|
+| Coleta | Python, `requests`, `BeautifulSoup` |
+| Agendamento | GitHub Actions (cron a cada 5 minutos) |
+| Banco de dados | MongoDB Atlas, via `pymongo` |
+| API | FastAPI |
+| Painel | HTML, CSS e JavaScript puro, com Chart.js para os gráficos |
+| Hospedagem | Vercel (API e painel) |
+
+## Site coletado
 
 [We Work Remotely](https://weworkremotely.com/remote-jobs): listagem pública de vagas remotas. O crawler coleta apenas dados das vagas (título, empresa, categoria, contrato, faixa salarial, região, data de publicação e link), sem dados pessoais.
 
@@ -16,85 +44,29 @@ O crawler acessa o site público **a cada 5 minutos**, salva as vagas no MongoDB
 
 ```text
 Web-Crawler/
+├── .github/
+│   └── workflows/
+│       └── crawler.yml      # Agenda e executa o crawler a cada 5 minutos
 ├── api/
-│   ├── main.py        # App FastAPI, serve o front e dispara a coleta a cada 5 minutos
-│   └── routes.py      # Endpoints /jobs, /stats e /filters
-├── frontend/          # Interface web (HTML, CSS e JS puro)
-│   ├── index.html     # Painel: indicadores, gráficos, filtros e lista de vagas
-│   ├── job.html       # Tela de detalhes (job.html?id=...)
-│   └── assets/        # CSS e módulos JS do front
-├── crawler.py         # Requisição ao site, parsing do HTML e loop de coleta
-├── database.py        # Conexão e persistência no MongoDB
+│   ├── main.py              # App FastAPI e registro das rotas
+│   └── routes.py            # Endpoints /jobs, /stats e /filters
+├── public/                  # Painel web (HTML, CSS e JS puro)
+│   ├── index.html           # Painel: indicadores, gráficos, filtros e lista
+│   ├── job.html             # Tela de detalhes (job.html?id=...)
+│   └── assets/
+│       ├── css/app.css
+│       └── js/              # api, painel, detalhe, charts e format
+├── app.py                   # Ponto de entrada da API para a Vercel
+├── crawler.py               # Requisição ao site, parsing e tratamento dos dados
+├── database.py              # Conexão e persistência no MongoDB
 └── requirements.txt
 ```
-
-## Pré-requisitos
-
-- Python 3.11+
-- MongoDB rodando em `mongodb://localhost:27017`
-- Conexão com a internet
-
-## Instalação
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux/macOS
-
-pip install -r requirements.txt
-```
-
-Para usar outro endereço do MongoDB, altere `MONGO_URI` em `database.py`.
-
-## Como executar
-
-Com o MongoDB ligado, rode na raiz do projeto:
-
-```bash
-python -m uvicorn api.main:app --reload
-```
-
-- Front-end (lista de vagas): http://localhost:8000
-- Documentação interativa da API (Swagger): http://localhost:8000/docs
-
-Ao iniciar, a API dispara o crawler em segundo plano. Não há nada para instalar no front: a própria API serve os arquivos HTML.
-
-> Abra o front sempre pelo endereço `http://localhost:8000`. Abrir o `index.html` direto no navegador não funciona, pois as chamadas à API usam caminhos relativos.
-
-### Coleta automática a cada 5 minutos
-
-O crawler faz uma nova requisição ao site a cada **5 minutos**, enquanto a aplicação estiver rodando. A cada ciclo, o terminal mostra:
-
-```text
-[14:00:03] Iniciando coleta...
-Coletando: https://weworkremotely.com/remote-jobs
-Status: 200
-Elementos encontrados: 193
-Vagas encontradas: 192
-Novas vagas inseridas: 0
-Dados salvos no MongoDB.
-[14:00:03] Coleta finalizada. Próxima em 5 minutos.
-```
-
-- Se o site falhar em uma coleta, o erro é exibido e o loop continua; a próxima tentativa acontece 5 minutos depois.
-- Para mudar o intervalo, altere `INTERVALO_MINUTOS` em `api/main.py`.
-- A página de listagem não atualiza sozinha: recarregue (F5) para ver as vagas novas.
-
-### Rodar o crawler separado da API (opcional)
-
-O crawler também funciona de forma independente da API, com o mesmo loop de 5 minutos:
-
-```bash
-python crawler.py
-```
-
-Use essa forma só se a coleta **não** estiver sendo disparada pela API (remova o `startup` do `api/main.py`). Não rode as duas ao mesmo tempo, senão o site será acessado em duplicidade.
 
 ## Banco de dados
 
 - Banco: `job_crawler`
 - Collection: `jobs`
-- Identificação de duplicados: a `url` da vaga. A coleta usa `upsert`, então novas execuções não duplicam registros nem apagam dados anteriores. Em cada ciclo, as vagas já existentes têm o `collected_at` atualizado e apenas as vagas inéditas são inseridas.
+- Identificação de duplicados: a `url` da vaga. A coleta usa `upsert`, então novas execuções não duplicam registros nem apagam dados anteriores.
 
 Exemplo de documento:
 
@@ -136,9 +108,11 @@ A API não guarda a idade da vaga em dias: ela calcula `posted_age_days` a parti
 
 ## Endpoints da API
 
+Documentação interativa (Swagger): https://web-crawler-orcin.vercel.app/docs
+
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/jobs/` | Lista paginada de vagas, com busca, filtros e ordenação |
+| GET | `/jobs/` | Lista paginada de vagas, com busca e filtros |
 | GET | `/jobs/{job_id}` | Retorna uma vaga pelo `_id`. Responde `400` se o ID for inválido e `404` se não existir |
 | GET | `/stats/` | Indicadores e agregações do mesmo recorte aceito por `/jobs/` |
 | GET | `/filters/` | Valores disponíveis para os filtros de categoria, contrato e região |
@@ -149,9 +123,8 @@ Os filtros são opcionais e combinam entre si. `search` procura no título e na 
 |---|---|---|
 | `search` | vazio | Qualquer texto |
 | `category` / `job_type` / `region` | vazio | Um dos valores devolvidos por `/filters/` |
-| `sort` | `collected_at` decrescente | `title` ou `company` |
 | `page` | `1` | Inteiro a partir de 1 |
-| `page_size` | `15` | De 1 a 100 |
+| `page_size` | `20` | De 1 a 100 |
 
 `/jobs/` responde com `items`, `total`, `page`, `page_size` e `pages`. Cada vaga traz também `posted_age_days`, a idade do anúncio em dias.
 
@@ -160,22 +133,84 @@ Os filtros são opcionais e combinam entre si. `search` procura no título e na 
 Exemplos:
 
 ```bash
-curl http://localhost:8000/jobs/
-curl "http://localhost:8000/jobs/?search=python&category=Design&page=2"
-curl http://localhost:8000/jobs/66f9a1b2c3d4e5f6a7b8c9d0
-curl "http://localhost:8000/stats/?job_type=Contract"
-curl http://localhost:8000/filters/
+curl https://web-crawler-orcin.vercel.app/jobs/
+curl "https://web-crawler-orcin.vercel.app/jobs/?search=python&category=Design&page=2"
+curl https://web-crawler-orcin.vercel.app/jobs/66f9a1b2c3d4e5f6a7b8c9d0
+curl "https://web-crawler-orcin.vercel.app/stats/?job_type=Contract"
+curl https://web-crawler-orcin.vercel.app/filters/
 ```
 
-> Os routers precisam ser registrados **antes** do `app.mount("/")` em `api/main.py`. O mount responde por qualquer caminho, então uma rota registrada depois dele nunca é alcançada.
+## Painel web
 
-## Telas do front-end
-
-- `index.html` (`/`): painel com indicadores, gráficos, busca, filtros e a lista paginada de vagas; cada item leva ao detalhe.
+- `index.html` (`/`): painel com quatro indicadores (vagas, empresas, novas na semana e vagas com salário), quatro gráficos (vagas por categoria, empresas que mais contratam, faixa salarial e idade do anúncio), busca por título ou empresa, filtros de categoria, contrato e região, e a lista paginada de vagas. Todos os dados vêm exclusivamente da API.
 - `job.html?id=<_id>`: detalhes da vaga (empresa, contrato, região, faixa salarial, fonte e data da coleta) e botão para abrir a vaga original.
 
-## Roadmap
+## Executar localmente
 
-- [x] Endpoint de busca/filtro (ex.: `/jobs?search=python&category=Design`)
-- [x] Endpoint de estatísticas (total, vagas por empresa, categoria, contrato e faixa salarial)
-- [x] Dashboard com indicadores, gráficos e filtros
+Pré-requisitos: Python 3.11+ e um MongoDB local em `mongodb://localhost:27017` (ou um cluster Atlas).
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
+
+pip install -r requirements.txt
+```
+
+**Rodar o crawler uma vez** (coleta o site e grava no banco):
+
+```bash
+python -c "from crawler import run_crawler; run_crawler()"
+```
+
+**Rodar a API:**
+
+```bash
+python -m uvicorn api.main:app --reload
+```
+
+- API: http://localhost:8000
+- Swagger: http://localhost:8000/docs
+
+Para usar outro banco, defina a variável de ambiente `MONGO_URI` antes de rodar (veja a tabela abaixo). Sem ela, o projeto usa o MongoDB local.
+
+> A API local não serve mais o painel. O painel chama a API pelo mesmo endereço de onde foi aberto, então ele funciona na versão publicada. Para vê-lo localmente é preciso servir `public/` e a API na mesma origem, por exemplo com `vercel dev`.
+
+## Publicação (deploy)
+
+A versão online usa três serviços gratuitos, cada um com um papel:
+
+| Serviço | Papel |
+|---|---|
+| MongoDB Atlas | Armazena as vagas |
+| GitHub Actions | Executa o crawler a cada 5 minutos |
+| Vercel | Hospeda a API e o painel |
+
+**1. Atlas**
+- Crie um cluster gratuito (M0).
+- Em *Database Access*, crie dois usuários: um com permissão de escrita (para o crawler) e um somente leitura (para a API).
+- Em *Network Access*, libere `0.0.0.0/0`, pois os IPs do GitHub e da Vercel não são fixos.
+
+**2. GitHub**
+- Em *Settings → Secrets and variables → Actions*, crie o secret `MONGO_URI` com a connection string do usuário de **escrita**.
+- O workflow `.github/workflows/crawler.yml` já agenda a coleta. Para testar à mão, use *Actions → Crawler → Run workflow*.
+
+**3. Vercel**
+- Importe o repositório e, em *Environment Variables*, crie `MONGO_URI` com a connection string do usuário **somente leitura**.
+- A Vercel detecta o FastAPI sozinha (ponto de entrada em `app.py`) e serve a pasta `public/` como painel.
+
+### Variáveis de ambiente
+
+| Variável | Onde | Valor |
+|---|---|---|
+| `MONGO_URI` | Secret do GitHub | Connection string do Atlas, usuário de escrita |
+| `MONGO_URI` | Variável da Vercel | Connection string do Atlas, usuário de leitura |
+
+Nunca versione connection strings: o `.gitignore` já ignora o arquivo `.env`.
+
+## Observações
+
+- O agendamento do GitHub Actions funciona em "melhor esforço": a coleta pode atrasar alguns minutos em relação aos 5 minutos configurados.
+- O cron da Vercel não é usado porque o plano gratuito só permite execução uma vez por dia. Por isso a coleta fica no GitHub Actions.
+- A API é pública e só tem rotas `GET`. O usuário somente leitura do Atlas garante que ela não consiga alterar os dados.
+- O painel não se atualiza sozinho: recarregue a página para ver as vagas mais recentes.
