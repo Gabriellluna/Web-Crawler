@@ -1,7 +1,9 @@
+import os
 from pymongo import MongoClient
 from datetime import datetime, timezone
 
-MONGO_URI = "mongodb://localhost:27017"
+# MONGO_URI = "mongodb://localhost:27017"
+MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
 DATABASE_NAME = "job_crawler"
 COLLECTION_NAME = "jobs"
 
